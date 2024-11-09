@@ -1,4 +1,3 @@
-import json
 import os
 import random
 from selenium import webdriver
@@ -17,11 +16,10 @@ import openpyxl
 options = Options()
 # options.add_argument("--start-maximized")  # Обычный режим (не headless)
 options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
+options.add_argument(
+    "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
-
-
+driver.get('https://www.ozon.ru/')
 time.sleep(5)
 
 
@@ -39,7 +37,7 @@ def get_id(filepath):
         i += 1
     i = 2
     ids = []
-    while i < amount_of_dates:
+    while i < amount_of_dates + 2:
         ids.append(sheet[f'B{i}'].value)
         i += 1
 
@@ -49,7 +47,7 @@ def get_id(filepath):
 def get_prices(filepath):
     global driver
     ids = get_id(filepath)
-    try:
+    try: # на случай анти-бот проверки при входе на сайт
         time.sleep(2)
         driver.find_element(By.XPATH, '//*[@id="reload-button"]').click()
     except Exception:
@@ -57,9 +55,10 @@ def get_prices(filepath):
 
     prices = []
     availability = []
-    available = True
+
     row = 1
-    for item in ids:  # основной цикл поиска товаров на основе
+    for item in ids:
+        available = True # основной цикл поиска товаров на основе
         search = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, '//input[@class="ia5a_33 tsBody500Medium" and @name="text"]'))
         )
@@ -67,7 +66,9 @@ def get_prices(filepath):
         search.send_keys(item)
         search.send_keys(Keys.RETURN)
         try:  # проверяем на наличие товара
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//input[@class="mp_27"')))
+            driver.find_element(By.XPATH, '//h2[contains(@class, "mp_27") and contains(text(), "закончился")]')
+            # WebDriverWait(driver, 10).until(EC.presence_of_element_located(
+            #     (By.XPATH, '//h2[contains(@class, "mp_27") and contains(text(), "закончился")]')))
             available = False
         except Exception:
             pass
@@ -80,6 +81,7 @@ def get_prices(filepath):
             availability.append('В наличии')
             prices.append(prices_cleaned)
         else:
+            availability.append('Нет в наличии')
             price = ''
             prices.append(price)
 
@@ -115,7 +117,6 @@ def get_low_price():
     type_of_item = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="10500"]/div[2]/div[1]/div[1]/div[1]/a[2]')))
     type_of_item.click()
-    print('нажал кнопку')
     time.sleep(10)
     window_handles = driver.window_handles
     driver.switch_to.window(window_handles[-1])
@@ -124,7 +125,7 @@ def get_low_price():
     three_items = random.sample(all_items, 3)
 
     for item in three_items:
-        time.sleep(5)
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable(item))
         driver.execute_script("arguments[0].click();", item)
         time.sleep(5)
         window_handles = driver.window_handles
@@ -133,8 +134,8 @@ def get_low_price():
             EC.presence_of_element_located((
                 By.XPATH, '//*[@id="layoutPage"]/div[1]/div[4]/div[2]/div/div/div/div[2]/button[2]/div')))
         try:
-            # driver.execute_script("arguments[0].click();", comparison)
-            comparison.click()
+            driver.execute_script("arguments[0].click();", comparison)
+            # comparison.click()
             print('нажал кнопку')
         except Exception:
             print('Не удалось нажать кнопку')
@@ -167,12 +168,12 @@ def get_low_price():
             (By.XPATH, '//*[@id="layoutPage"]/div[1]/div/div/div[2]/div[4]/div[2]/div/section/div[1]/div[1]/button')))
     buy_button.click()
 
+
 if __name__ == '__main__':
-    # filename = 'товары.xlsx'
-    # filepath = os.path.join(os.getcwd(), filename)
-    # prices, availability = get_prices(filepath)
-    # save_to_ex(prices, availability, filepath)
-    # print(prices)
-    # print(availability)
+    filepath = os.path.join(os.getcwd(), 'товары.xlsx')
+    prices, availability = get_prices(filepath)
+    save_to_ex(prices, availability, filepath)
+    print(prices)
+    print(availability)
     get_low_price()
     driver.quit()
