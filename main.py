@@ -127,7 +127,8 @@ def get_low_price():
     window_handles = driver.window_handles
     driver.switch_to.window(window_handles[-1])
     all_items = driver.find_elements(
-        By.XPATH, "//span[contains(@class, 'tsBody500Medium') and contains(text(), 'Холодильник')]")
+        By.XPATH,
+        "//span[contains(@class, 'tsBody500Medium') and contains(text(), 'Холодильник') and not(contains(text(), 'косметики'))]")
     three_items = random.sample(all_items, 3)
 
     for item in three_items:
@@ -175,20 +176,39 @@ def get_low_price():
     buy_button.click()
 
     try:
-        delivery_type = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located(
-                (By.XPATH,
-                 '//*[@id="layoutPage"]/div[1]/div[3]/div/div/div[2]/div[2]'
-                 '/div/div[1]/section[2]/div[1]/div[2]/div/div[1]/div/button')))
-        delivery_type.click()
-        add_post = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
-            (By.XPATH, '/html/body/div[3]/div/div[2]/div/div/div/div/div/div/div[3]/button')
-        ))
+        try:
+            delivery_type = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located(
+                    (By.XPATH,
+                     '//*[@id="layoutPage"]/div[1]/div[3]/div/div/div[2]/div[2]'
+                     '/div/div[1]/section[2]/div[1]/div[2]/div/div[1]/div/button')))
+            delivery_type.click()
+            add_post = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
+                (By.XPATH, '/html/body/div[3]/div/div[2]/div/div/div/div/div/div/div[3]/button')
+            ))
+        except Exception:
+            add_post = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
+                (By.XPATH, '//*[@id="layoutPage"]/div[1]/div[3]/div[3]/div/div/div/div/div/div[2]/div[1]/div/p')
+            ))
+
         add_post.click()
         time.sleep(4)
-        post_pin = driver.find_element(By.XPATH, '//*[@id="sdk-map-container"]/div/div[1]/div[2]/div[2]/div/div/img')
+        try:
+            no_post = driver.find_element(By.XPATH, '//*[@id="layoutPage"]/div[1]/div/div/div[1]/div/div/div/div[3]/div/div/form/div/div/fieldset/div[2]/div/div/div/div/span').text
+            if 'нет пунктов выдачи' in no_post:
+                raise Exception('Самовывоз невозможен')
+        except Exception as e:
+            if 'Самовывоз невозможен' in str(e):
+                print(e)
+                exit()
+            else:
+                pass
+
+        post_pin = driver.find_element(By.XPATH,
+                                       '//*[@id="sdk-map-container"]/div/div[1]/div[2]/div[2]/div/div/img')
         driver.execute_script('arguments[0].click()', post_pin)
-        driver.find_element(By.XPATH, '//*[@id="layoutPage"]/div[1]/div/div/div[1]/div/div/div/div[2]/button').click()
+        driver.find_element(By.XPATH,
+                            '//*[@id="layoutPage"]/div[1]/div/div/div[1]/div/div/div/div[2]/button').click()
 
 
     except Exception:
