@@ -1,4 +1,5 @@
 import os
+import pickle
 import random
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -19,7 +20,12 @@ options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_argument(
     "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+cookies = pickle.load(open("cookies.pkl", "rb"))
 driver.get('https://www.ozon.ru/')
+for cookie in cookies:
+    driver.add_cookie(cookie)
+
+driver.refresh()
 time.sleep(5)
 
 
@@ -168,12 +174,33 @@ def get_low_price():
             (By.XPATH, '//*[@id="layoutPage"]/div[1]/div/div/div[2]/div[4]/div[2]/div/section/div[1]/div[1]/button')))
     buy_button.click()
 
+    try:
+        delivery_type = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located(
+                (By.XPATH,
+                 '//*[@id="layoutPage"]/div[1]/div[3]/div/div/div[2]/div[2]'
+                 '/div/div[1]/section[2]/div[1]/div[2]/div/div[1]/div/button')))
+        delivery_type.click()
+        add_post = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
+            (By.XPATH, '/html/body/div[3]/div/div[2]/div/div/div/div/div/div/div[3]/button')
+        ))
+        add_post.click()
+        time.sleep(4)
+        post_pin = driver.find_element(By.XPATH, '//*[@id="sdk-map-container"]/div/div[1]/div[2]/div[2]/div/div/img')
+        driver.execute_script('arguments[0].click()', post_pin)
+        driver.find_element(By.XPATH, '//*[@id="layoutPage"]/div[1]/div/div/div[1]/div/div/div/div[2]/button').click()
+
+
+    except Exception:
+        print('Самвывоз невозможен')
+
+
 
 if __name__ == '__main__':
-    filepath = os.path.join(os.getcwd(), 'товары.xlsx')
-    prices, availability = get_prices(filepath)
-    save_to_ex(prices, availability, filepath)
-    print(prices)
-    print(availability)
+    # filepath = os.path.join(os.getcwd(), 'товары.xlsx')
+    # prices, availability = get_prices(filepath)
+    # save_to_ex(prices, availability, filepath)
+    # print(prices)
+    # print(availability)
     get_low_price()
     driver.quit()
